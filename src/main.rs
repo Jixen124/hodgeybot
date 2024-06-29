@@ -35,6 +35,7 @@ impl EventHandler for Bot {
 
         let msg_lower = msg.content.to_lowercase();
         //let has_admin = msg.author
+        //Figure out how to tell if user is full admin on the server
 
         //Hodgey Help
         if msg_lower == "hodgey bot help" || msg_lower == "hodgey help" {
@@ -88,7 +89,6 @@ impl EventHandler for Bot {
                 return;
             }
             let num_repeats = num_repeats.unwrap();
-            //let has_admin = msg.guild_id.unwrap()
             if num_repeats > 5 {
                 if let Err(e) = msg.channel_id.say(&ctx.http, "You are limited to 5").await {
                     error!("Error sending message: {e:?}");
