@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use anyhow::anyhow;
 use serenity::all::ChannelPinsUpdateEvent;
 use serenity::{async_trait, all::GuildChannel};
@@ -8,8 +10,80 @@ use serenity::prelude::*;
 use shuttle_runtime::SecretStore;
 use tracing::{error, info};
 use rand::{Rng, seq::SliceRandom};
+use chess::{Board, ChessMove, Color};
 mod quotes;
 mod jokes;
+
+const HODGEY_BOT_ID: u64 = 873373606900559943;
+
+struct ChessGame {
+    white_id: u64,
+    black_id: u64,
+    board: Board,
+}
+
+impl ChessGame {
+    fn new_game_random_sides(player1_id: u64, player2_id: u64) -> Self {
+        let mut rng = rand::thread_rng();
+        if rng.gen_bool(0.5) {
+            Self {
+                white_id: player1_id,
+                black_id: player2_id,
+                board: Board::default(),
+            }
+        }
+        else {
+            Self {
+                white_id: player2_id,
+                black_id: player1_id,
+                board: Board::default(),
+            }
+        }
+    }
+
+    fn has_user(&self, id: u64) -> bool {
+        self.white_id == id || self.black_id == id
+    }
+
+    fn id_to_move(&self) -> u64 {
+        match self.board.side_to_move() {
+            Color::White => self.white_id,
+            Color::Black => self.black_id
+        }
+    }
+
+    fn make_move(&mut self, move_str: &str) -> Result<(), chess::Error> {
+        let selected_move_result = match ChessMove::from_str(move_str) {
+            Ok(selected_move) => {
+                if self.board.legal(selected_move) {
+                    Ok(selected_move)
+                }
+                else {
+                    //The move is invalid if it is illegal
+                    Err(chess::Error::InvalidUciMove)
+                }
+            }
+            Err(_) => {
+                //If the move is invalid UCI attempt to get SAN
+                ChessMove::from_san(&self.board, move_str)
+            }
+        };
+
+        return match selected_move_result {
+            Ok(selected_move) => {
+                self.board = self.board.make_move_new(selected_move);
+                Ok(())
+            }
+            Err(e) => Err(e)
+        }
+    }
+}
+
+struct ChessGames;
+
+impl TypeMapKey for ChessGames {
+    type Value = Mutex<Vec<ChessGame>>;
+}
 
 struct Bot;
 
@@ -34,7 +108,7 @@ impl EventHandler for Bot {
         }
 
         let msg_lower = msg.content.to_lowercase();
-        //let has_admin = msg.author
+        // let has_admin = ?
         //Figure out how to tell if user is full admin on the server
 
         //Hodgey Help
@@ -51,7 +125,7 @@ impl EventHandler for Bot {
                     .title("Hodgey Joke")
                     .url("https://youtu.be/dQw4w9WgXcQ")
                     .colour(rand::thread_rng().gen_range(0..16777216))
-                    .fields(fields.to_vec()); //I can probably avoid turning this into a vector, I have no clue what I am doing
+                    .fields(fields.to_vec()); //I can probably avoid turning this into a vector, I have no clue what I am doing :)
             
                 let builder = CreateMessage::new()
                     .embed(embed)
@@ -78,7 +152,92 @@ impl EventHandler for Bot {
                 error!("Error sending message: {e:?}");
             }
         }
-        else if msg_lower.starts_with("spam") {
+        else if msg_lower == "chess show" {
+            let rw_lock = ctx.data.read().await;
+            let mut chess_games = rw_lock.get::<ChessGames>().expect("ChessGames not in TypeMap.").lock().await;
+            for game in chess_games.iter_mut() {
+                if game.has_user(msg.author.id.get()) {
+                    if let Err(e) = msg.reply(&ctx.http, fen_to_link(game.board.to_string())).await {
+                        error!("Error sending message: {e:?}");
+                    }
+                    return;
+                }
+            }
+            drop(chess_games); // drop mutex lock as soon as possible
+            if let Err(e) = msg.reply(&ctx.http, quotes::NO_ACTIVE_CHESS_GAME).await {
+                error!("Error sending message: {e:?}");
+            }
+        }
+        else if msg_lower.starts_with("chess new") {
+            //Do this before locking mutex
+            let author_id = msg.author.id.get();
+            let opponent_id = if let Some(user) = msg.mentions.choose(&mut rand::thread_rng()) {
+                user.id.get()
+            }
+            else {
+                HODGEY_BOT_ID
+            };
+
+            let rw_lock = ctx.data.read().await;
+            let mut chess_games = rw_lock.get::<ChessGames>().expect("ChessGames not in TypeMap.").lock().await;
+            for game in chess_games.iter_mut() {
+                if game.has_user(author_id) {
+                    *game = ChessGame::new_game_random_sides(author_id, opponent_id);
+                    if let Err(e) = msg.reply(&ctx.http, format!("New game created!\nWhite: <@{}>\nBlack: <@{}>", game.white_id, game.black_id)).await {
+                        error!("Error sending message: {e:?}");
+                    }
+                    if let Err(e) = msg.channel_id.say(&ctx.http, fen_to_link(game.board.to_string())).await {
+                        error!("Error sending message: {e:?}");
+                    }
+                    return;
+                }
+            }
+            let game = ChessGame::new_game_random_sides(author_id, opponent_id);
+            let white_id = game.white_id;
+            let black_id = game.black_id;
+            chess_games.push(game);
+            drop(chess_games); // drop mutex lock as soon as possible
+            if let Err(e) = msg.reply(&ctx.http, format!("New game created!\nWhite: <@{white_id}>\nBlack: <@{black_id}>")).await {
+                error!("Error sending message: {e:?}");
+            }
+            if let Err(e) = msg.channel_id.say(&ctx.http, fen_to_link(Board::default().to_string())).await {
+                error!("Error sending message: {e:?}");
+            }
+        }
+        else if msg_lower.starts_with("move ") {
+            let move_str = msg.content.splitn(2, ' ').nth(1).unwrap();
+            //stolen from https://stackoverflow.com/questions/57063777/remove-all-whitespace-from-a-string
+            let move_str: String = move_str.chars().filter(|c| !c.is_whitespace()).collect();
+            let author_id = msg.author.id.get();
+
+            let rw_lock = ctx.data.read().await;
+            let mut chess_games = rw_lock.get::<ChessGames>().expect("ChessGames not in TypeMap.").lock().await;
+            for game in chess_games.iter_mut() {
+                if game.has_user(author_id) {
+                    if game.id_to_move() != author_id {
+                        if let Err(e) = msg.reply(&ctx.http, "It is not your turn").await {
+                            error!("Error sending message: {e:?}");
+                        }
+                        return;
+                    }
+                    if game.make_move(&move_str).is_err() {
+                        if let Err(e) = msg.reply(&ctx.http, "I don't understand the move you are trying to make (or it is illegal)").await {
+                            error!("Error sending message: {e:?}");
+                        }
+                        return
+                    }
+                    if let Err(e) = msg.reply(&ctx.http, fen_to_link(game.board.to_string())).await {
+                        error!("Error sending message: {e:?}");
+                    }
+                    return;
+                }
+            }
+            drop(chess_games); // drop mutex lock as soon as possible
+            if let Err(e) = msg.reply(&ctx.http, quotes::NO_ACTIVE_CHESS_GAME).await {
+                error!("Error sending message: {e:?}");
+            }
+        }
+        else if msg_lower.starts_with("spam ") {
             let mut msg_parts = msg.content.splitn(3, ' ');
             let num_str = msg_parts.nth(1).unwrap();
             let num_repeats = num_str.parse::<usize>();
@@ -101,6 +260,9 @@ impl EventHandler for Bot {
                         error!("Error sending message: {e:?}");
                     }
                 }
+            }
+            else {
+                todo!() //Hodgey should send a message about being unsure what to send
             }
         }
         else if msg.content.contains("@everyone") {
@@ -208,8 +370,14 @@ async fn serenity(
 
     let client = Client::builder(&token, intents)
         .event_handler(Bot)
+        .type_map_insert::<ChessGames>(Mutex::new(Vec::new()))
         .await
         .expect("Err creating client");
 
     Ok(client.into())
+}
+
+fn fen_to_link(fen: String) -> String {
+    let fen = fen.split(' ').next().unwrap();
+    format!("https://www.chess.com/dynboard?fen={fen}&board=bases&piece=classic&size=3")
 }
