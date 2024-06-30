@@ -112,8 +112,13 @@ impl EventHandler for Bot {
         //Figure out how to tell if user is full admin on the server
 
         //Hodgey Help
-        if msg_lower == "hodgey bot help" || msg_lower == "hodgey help" {
+        if msg_lower == "hodgey help" {
             if let Err(e) = msg.reply(&ctx.http, quotes::HELP_MESSAGE).await {
+                error!("Error sending message: {e:?}");
+            }
+        }
+        else if msg_lower == "hodgey help chess" {
+            if let Err(e) = msg.reply(&ctx.http, quotes::CHESS_HELP_MESSAGE).await {
                 error!("Error sending message: {e:?}");
             }
         }
