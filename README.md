@@ -29,10 +29,8 @@ Stupid discord bot by Jixen.
 * Get mad about messages being deleted
 
 ### Chess
-* Detect when games end
-* Make it so that hodgey can play
 * Make it so players can't be drafted to 2 games at once
-* Make board swap sides
-* Add option to show coordinates
 * Tell players when they are in check
+* Detect when games end
 * Pawn promotion doesn't work
+* Make it so that hodgey can play

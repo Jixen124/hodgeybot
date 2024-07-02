@@ -16,10 +16,15 @@ mod jokes;
 
 const HODGEY_BOT_ID: u64 = 873373606900559943;
 
+//Having this link hardcoded is bad, I should it fix later
+const BLANK_CHESS_GAME_LINK: &str = "https://www.chess.com/dynboard?fen=rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR&board=bases&piece=classic&size=3&coordinates=1";
+
 struct ChessGame {
     white_id: u64,
     black_id: u64,
     board: Board,
+    show_coordinates: bool,
+    board_flips: bool,
 }
 
 impl ChessGame {
@@ -30,6 +35,8 @@ impl ChessGame {
                 white_id: player1_id,
                 black_id: player2_id,
                 board: Board::default(),
+                show_coordinates: true,
+                board_flips: true,
             }
         }
         else {
@@ -37,6 +44,8 @@ impl ChessGame {
                 white_id: player2_id,
                 black_id: player1_id,
                 board: Board::default(),
+                show_coordinates: true,
+                board_flips: true,
             }
         }
     }
@@ -76,6 +85,22 @@ impl ChessGame {
             }
             Err(e) => Err(e)
         }
+    }
+
+    fn to_link(&self) -> String {
+        let board_str = self.board.to_string();
+        let fen = board_str.split(' ').next().unwrap();
+        let mut result = format!("https://www.chess.com/dynboard?fen={fen}&board=bases&piece=classic&size=3");
+
+        if self.show_coordinates {
+            result += "&coordinates=1";
+        }
+
+        if self.board_flips && self.board.side_to_move() == Color::Black {
+            result += "&flip=1";
+        }
+
+        result
     }
 }
 
@@ -157,12 +182,58 @@ impl EventHandler for Bot {
                 error!("Error sending message: {e:?}");
             }
         }
+        else if msg_lower == "toggle coordinates" {
+            let rw_lock = ctx.data.read().await;
+            let mut chess_games = rw_lock.get::<ChessGames>().expect("ChessGames not in TypeMap.").lock().await;
+            for game in chess_games.iter_mut() {
+                if game.has_user(msg.author.id.get()) {
+                    game.show_coordinates = !game.show_coordinates;
+                    
+                    let response = match game.show_coordinates {
+                        true => "Coordinates enabled.",
+                        false => "Coordinates disabled."
+                    };
+
+                    if let Err(e) = msg.reply(&ctx.http, response).await {
+                        error!("Error sending message: {e:?}");
+                    }
+                    return;
+                }
+            }
+            drop(chess_games); // drop mutex lock as soon as possible
+            if let Err(e) = msg.reply(&ctx.http, quotes::NO_ACTIVE_CHESS_GAME).await {
+                error!("Error sending message: {e:?}");
+            }
+        }
+        else if msg_lower == "toggle board flip" {
+            let rw_lock = ctx.data.read().await;
+            let mut chess_games = rw_lock.get::<ChessGames>().expect("ChessGames not in TypeMap.").lock().await;
+            for game in chess_games.iter_mut() {
+                if game.has_user(msg.author.id.get()) {
+                    game.board_flips = !game.board_flips;
+                    
+                    let response = match game.board_flips {
+                        true => "Board flip enabled.",
+                        false => "Board flip disabled."
+                    };
+
+                    if let Err(e) = msg.reply(&ctx.http, response).await {
+                        error!("Error sending message: {e:?}");
+                    }
+                    return;
+                }
+            }
+            drop(chess_games); // drop mutex lock as soon as possible
+            if let Err(e) = msg.reply(&ctx.http, quotes::NO_ACTIVE_CHESS_GAME).await {
+                error!("Error sending message: {e:?}");
+            }
+        }
         else if msg_lower == "chess show" {
             let rw_lock = ctx.data.read().await;
             let mut chess_games = rw_lock.get::<ChessGames>().expect("ChessGames not in TypeMap.").lock().await;
             for game in chess_games.iter_mut() {
                 if game.has_user(msg.author.id.get()) {
-                    if let Err(e) = msg.reply(&ctx.http, fen_to_link(game.board.to_string())).await {
+                    if let Err(e) = msg.reply(&ctx.http, game.to_link()).await {
                         error!("Error sending message: {e:?}");
                     }
                     return;
@@ -191,7 +262,7 @@ impl EventHandler for Bot {
                     if let Err(e) = msg.reply(&ctx.http, format!("New game created!\nWhite: <@{}>\nBlack: <@{}>", game.white_id, game.black_id)).await {
                         error!("Error sending message: {e:?}");
                     }
-                    if let Err(e) = msg.channel_id.say(&ctx.http, fen_to_link(game.board.to_string())).await {
+                    if let Err(e) = msg.channel_id.say(&ctx.http, game.to_link()).await {
                         error!("Error sending message: {e:?}");
                     }
                     return;
@@ -205,7 +276,7 @@ impl EventHandler for Bot {
             if let Err(e) = msg.reply(&ctx.http, format!("New game created!\nWhite: <@{white_id}>\nBlack: <@{black_id}>")).await {
                 error!("Error sending message: {e:?}");
             }
-            if let Err(e) = msg.channel_id.say(&ctx.http, fen_to_link(Board::default().to_string())).await {
+            if let Err(e) = msg.channel_id.say(&ctx.http, BLANK_CHESS_GAME_LINK).await {
                 error!("Error sending message: {e:?}");
             }
         }
@@ -231,9 +302,23 @@ impl EventHandler for Bot {
                         }
                         return
                     }
-                    if let Err(e) = msg.reply(&ctx.http, fen_to_link(game.board.to_string())).await {
+                    
+                    let id_to_move = game.id_to_move();
+                    if id_to_move == HODGEY_BOT_ID {
+                        if let Err(e) = msg.channel_id.say(&ctx.http, format!("It is my turn, but I don't know how to play chess yet :(")).await {
+                            error!("Error sending message: {e:?}");
+                        }
+                    }
+                    else {
+                        if let Err(e) = msg.channel_id.say(&ctx.http, format!("Your turn <@{id_to_move}>!")).await {
+                            error!("Error sending message: {e:?}");
+                        }
+                    }
+
+                    if let Err(e) = msg.channel_id.say(&ctx.http, game.to_link()).await {
                         error!("Error sending message: {e:?}");
                     }
+
                     return;
                 }
             }
@@ -380,9 +465,4 @@ async fn serenity(
         .expect("Err creating client");
 
     Ok(client.into())
-}
-
-fn fen_to_link(fen: String) -> String {
-    let fen = fen.split(' ').next().unwrap();
-    format!("https://www.chess.com/dynboard?fen={fen}&board=bases&piece=classic&size=3")
 }

@@ -1,9 +1,9 @@
 pub const HELP_MESSAGE: &str = "## HODGEY BOT COMMAND LIST\n\n### Hodgey Help\nGives the list of commands for Hodgey bot.\n### @Someone\nIf used anywhere in the message a random user will be pinged.\n### Hodgey Joke\nHodgey bot tell's you a joke.\n### Hodgey Help Chess\nGives the list of chess commands.";
 /*
 parts from old help message
-\n### Set Message Channel (Doesn't work right now)\nSets the channel for my random messages (you need to be a mod)\n### Remove Message Channel (Doesn't work right now)\nRemoves the channel for my random messages (you need to be a mod)\n### Hodgey Bot Stats (Doesn't work right now)\nGives some stats about hodgey bot\n### Hodgey Bot Suggestion (Doesn't work right now)\nsuggest a feature or improvement for Hodgey Bot
+\n### Set Message Channel\nSets the channel for my random messages (you need to be a mod)\n### Remove Message Channel\nRemoves the channel for my random messages (you need to be a mod)\n### Hodgey Stats\nGives some stats about hodgey bot\n### Hodgey Bot Suggestion\nsuggest a feature or improvement for Hodgey Bot
 */
-pub const CHESS_HELP_MESSAGE: &str = "## HODGEY BOT CHESS COMMAND LIST\n\n### Chess New\nStarts a new chess game. To play against another person ping them at the end of the message.\n### Chess Show\nShows your current chess game.\n### Move\nLets you make a move. Examples: \"Move e4\", \"Move Nc6\", \"Move e2 e4\".";
+pub const CHESS_HELP_MESSAGE: &str = "## HODGEY BOT CHESS COMMAND LIST\n\n### Chess New\nStarts a new chess game. To play against another person ping them at the end of the message.\n### Move\nLets you make a move. Examples: \"Move e4\", \"Move Nc6\", \"Move e2 e4\".\n### Chess Show\nShows your current chess game.\n### Toggle Coordinates\nDisables or enables coordinates.\n### Toggle Board Flip\nDisables or enables the board flipping on black's turn.";
 pub const NO_ACTIVE_CHESS_GAME: &str = "You don't have an active chess game. Start a new one with \"Chess New\"";
 pub const MEE6: [&str; 3] = ["SHUT UP MEE6!", "Get stuffed MEE6!", "MEE6, more like bad!"];
 pub const BUSY: [&str; 2] = ["playing chess", "listening to Green Day"];
