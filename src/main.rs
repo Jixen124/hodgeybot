@@ -10,7 +10,7 @@ use serenity::prelude::*;
 use shuttle_runtime::SecretStore;
 use tracing::{error, info};
 use rand::{Rng, seq::SliceRandom};
-use chess::{Board, ChessMove, Color};
+use chess::{Board, ChessMove, Color, BoardStatus};
 mod quotes;
 mod jokes;
 
@@ -290,6 +290,14 @@ impl EventHandler for Bot {
             let mut chess_games = rw_lock.get::<ChessGames>().expect("ChessGames not in TypeMap.").lock().await;
             for game in chess_games.iter_mut() {
                 if game.has_user(author_id) {
+                    //can't move on gameover
+                    if game.board.status() != BoardStatus::Ongoing {
+                        if let Err(e) = msg.channel_id.say(&ctx.http, format!("The game has ended.")).await {
+                            error!("Error sending message: {e:?}");
+                        }
+                        return;
+                    }
+
                     if game.id_to_move() != author_id {
                         if let Err(e) = msg.reply(&ctx.http, "It is not your turn").await {
                             error!("Error sending message: {e:?}");
@@ -304,8 +312,32 @@ impl EventHandler for Bot {
                     }
                     
                     let id_to_move = game.id_to_move();
+
+                    //gameover
+                    if game.board.status() != BoardStatus::Ongoing {
+                        if game.board.status() == BoardStatus::Checkmate {
+                            if let Err(e) = msg.channel_id.say(&ctx.http, format!("Checkmate!")).await {
+                                error!("Error sending message: {e:?}");
+                            }
+                        }
+                        else {
+                            if let Err(e) = msg.channel_id.say(&ctx.http, format!("Stalemate!")).await {
+                                error!("Error sending message: {e:?}");
+                            }
+                        }
+                        return;
+                    }
+
                     if id_to_move == HODGEY_BOT_ID {
                         if let Err(e) = msg.channel_id.say(&ctx.http, format!("It is my turn, but I don't know how to play chess yet :(")).await {
+                            error!("Error sending message: {e:?}");
+                        }
+                        return;
+                    }
+                    
+                    //Check if the player is in check
+                    if game.board.checkers().popcnt() != 0 {
+                        if let Err(e) = msg.channel_id.say(&ctx.http, format!("You are in check <@{id_to_move}>!")).await {
                             error!("Error sending message: {e:?}");
                         }
                     }
@@ -314,7 +346,7 @@ impl EventHandler for Bot {
                             error!("Error sending message: {e:?}");
                         }
                     }
-
+                    
                     if let Err(e) = msg.channel_id.say(&ctx.http, game.to_link()).await {
                         error!("Error sending message: {e:?}");
                     }
@@ -352,11 +384,13 @@ impl EventHandler for Bot {
                 }
             }
             else {
-                todo!() //Hodgey should send a message about being unsure what to send
+                if let Err(e) = msg.channel_id.say(&ctx.http, "I don't understand your message").await {
+                    error!("Error sending message: {e:?}");
+                }
             }
         }
         else if msg.content.contains("@everyone") {
-            if let Err(e) = msg.channel_id.say(&ctx.http, "Wow, you would ping @everyone!").await {
+            if let Err(e) = msg.reply(&ctx.http, "Wow, you would ping @everyone!").await {
                 error!("Error sending message: {e:?}");
             }
         }
