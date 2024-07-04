@@ -36,7 +36,7 @@ impl ChessGame {
                 black_id: player2_id,
                 board: Board::default(),
                 show_coordinates: true,
-                board_flips: true,
+                board_flips: false,
             }
         }
         else {
@@ -45,7 +45,7 @@ impl ChessGame {
                 black_id: player1_id,
                 board: Board::default(),
                 show_coordinates: true,
-                board_flips: true,
+                board_flips: false,
             }
         }
     }
