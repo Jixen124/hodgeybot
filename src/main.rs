@@ -50,7 +50,7 @@ impl ChessGame {
         }
     }
 
-    fn has_user(&self, id: u64) -> bool {
+    const fn has_user(&self, id: u64) -> bool {
         self.white_id == id || self.black_id == id
     }
 
@@ -181,6 +181,11 @@ impl EventHandler for Bot {
             if let Err(e) = msg.reply(&ctx.http, "Two!").await {
                 error!("Error sending message: {e:?}");
             }
+        }
+        else if msg_lower == "chess resign" || msg_lower ==  "chess surrender" {
+            let rw_lock = ctx.data.read().await;
+            let mut chess_games = rw_lock.get::<ChessGames>().expect("ChessGames not in TypeMap.").lock().await;
+            chess_games.retain(|game| game.has_user(msg.author.id.get()));
         }
         else if msg_lower == "toggle coordinates" {
             let rw_lock = ctx.data.read().await;
