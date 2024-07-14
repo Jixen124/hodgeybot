@@ -14,6 +14,8 @@ Stupid discord bot by Jixen.
 * Hodgey math? if I feel like adding it back
 * Once upon a time
 * Spam cooldown
+* add hodgey decide into help list
+* make hodgey use built in discord / commands
 
 #### Messages when stuff happens:
 * Get mad when people change their profiles
