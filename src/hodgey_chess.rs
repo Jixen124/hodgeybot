@@ -1,7 +1,7 @@
 use std::str::FromStr;
-use rand::Rng;
-use chess::{Board, ChessMove, Color};
+use chess::{Board, ChessMove, Color, MoveGen};
 use serenity::prelude::*;
+use rand::{Rng, thread_rng, seq::IteratorRandom};
 
 pub use chess::BoardStatus;
 
@@ -24,7 +24,7 @@ pub struct ChessGame {
 
 impl ChessGame {
     pub fn new_game_random_sides(player1_id: u64, player2_id: u64) -> Self {
-        let mut rng = rand::thread_rng();
+        let mut rng = thread_rng();
         if rng.gen_bool(0.5) {
             Self {
                 white_id: player1_id,
@@ -56,7 +56,11 @@ impl ChessGame {
         }
     }
 
-    pub fn make_move(&mut self, move_str: &str) -> Result<(), chess::Error> {
+    pub fn make_move(&mut self, selected_move: ChessMove) {
+        self.board = self.board.make_move_new(selected_move);
+    }
+
+    pub fn make_move_from_str(&mut self, move_str: &str) -> Result<(), chess::Error> {
         let selected_move_result = match ChessMove::from_str(move_str) {
             Ok(selected_move) => {
                 if self.board.legal(selected_move) {
@@ -75,15 +79,16 @@ impl ChessGame {
         
         return match selected_move_result {
             Ok(selected_move) => {
-                self.board = self.board.make_move_new(selected_move);
+                self.make_move(selected_move);
                 Ok(())
             }
             Err(e) => Err(e)
         }
     }
 
-    pub fn generate_hodgey_move(&self) -> ChessMove {
-        todo!()
+    pub fn generate_hodgey_move(&mut self) -> Option<ChessMove> {
+        let moves = MoveGen::new_legal(&self.board);
+        moves.choose(&mut thread_rng())
     }
 
     pub fn is_in_check(&self) -> bool {
