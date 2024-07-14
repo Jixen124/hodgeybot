@@ -1,8 +1,6 @@
-use std::str::FromStr;
-
 use anyhow::anyhow;
-use serenity::all::ChannelPinsUpdateEvent;
-use serenity::{async_trait, all::GuildChannel};
+use serenity::all::{ChannelPinsUpdateEvent, GuildChannel};
+use serenity::async_trait;
 use serenity::model::channel::Message;
 use serenity::model::gateway::Ready;
 use serenity::builder::{CreateEmbed, CreateMessage};
@@ -10,105 +8,12 @@ use serenity::prelude::*;
 use shuttle_runtime::SecretStore;
 use tracing::{error, info};
 use rand::{Rng, seq::SliceRandom};
-use chess::{Board, ChessMove, Color, BoardStatus};
 mod quotes;
 mod jokes;
+mod hodgey_chess;
+use hodgey_chess::{ChessGame, ChessGames, BoardStatus};
 
 const HODGEY_BOT_ID: u64 = 873373606900559943;
-
-//Having this link hardcoded is bad, I should it fix later
-const BLANK_CHESS_GAME_LINK: &str = "https://www.chess.com/dynboard?fen=rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR&board=bases&piece=classic&size=3&coordinates=1";
-
-struct ChessGame {
-    white_id: u64,
-    black_id: u64,
-    board: Board,
-    show_coordinates: bool,
-    board_flips: bool,
-}
-
-impl ChessGame {
-    fn new_game_random_sides(player1_id: u64, player2_id: u64) -> Self {
-        let mut rng = rand::thread_rng();
-        if rng.gen_bool(0.5) {
-            Self {
-                white_id: player1_id,
-                black_id: player2_id,
-                board: Board::default(),
-                show_coordinates: true,
-                board_flips: false,
-            }
-        }
-        else {
-            Self {
-                white_id: player2_id,
-                black_id: player1_id,
-                board: Board::default(),
-                show_coordinates: true,
-                board_flips: false,
-            }
-        }
-    }
-
-    const fn has_user(&self, id: u64) -> bool {
-        self.white_id == id || self.black_id == id
-    }
-
-    fn id_to_move(&self) -> u64 {
-        match self.board.side_to_move() {
-            Color::White => self.white_id,
-            Color::Black => self.black_id
-        }
-    }
-
-    fn make_move(&mut self, move_str: &str) -> Result<(), chess::Error> {
-        let selected_move_result = match ChessMove::from_str(move_str) {
-            Ok(selected_move) => {
-                if self.board.legal(selected_move) {
-                    Ok(selected_move)
-                }
-                else {
-                    //The move is invalid if it is illegal
-                    Err(chess::Error::InvalidUciMove)
-                }
-            }
-            Err(_) => {
-                //If the move is invalid UCI attempt to get SAN
-                ChessMove::from_san(&self.board, move_str)
-            }
-        };
-
-        return match selected_move_result {
-            Ok(selected_move) => {
-                self.board = self.board.make_move_new(selected_move);
-                Ok(())
-            }
-            Err(e) => Err(e)
-        }
-    }
-
-    fn to_link(&self) -> String {
-        let board_str = self.board.to_string();
-        let fen = board_str.split(' ').next().unwrap();
-        let mut result = format!("https://www.chess.com/dynboard?fen={fen}&board=bases&piece=classic&size=3");
-
-        if self.show_coordinates {
-            result += "&coordinates=1";
-        }
-
-        if self.board_flips && self.board.side_to_move() == Color::Black {
-            result += "&flip=1";
-        }
-
-        result
-    }
-}
-
-struct ChessGames;
-
-impl TypeMapKey for ChessGames {
-    type Value = Mutex<Vec<ChessGame>>;
-}
 
 struct Bot;
 
@@ -281,7 +186,8 @@ impl EventHandler for Bot {
             if let Err(e) = msg.reply(&ctx.http, format!("New game created!\nWhite: <@{white_id}>\nBlack: <@{black_id}>")).await {
                 error!("Error sending message: {e:?}");
             }
-            if let Err(e) = msg.channel_id.say(&ctx.http, BLANK_CHESS_GAME_LINK).await {
+            //Hardcoded link should be avoided here
+            if let Err(e) = msg.channel_id.say(&ctx.http, hodgey_chess::NEW_CHESS_GAME_LINK).await {
                 error!("Error sending message: {e:?}");
             }
         }
@@ -296,7 +202,7 @@ impl EventHandler for Bot {
             for game in chess_games.iter_mut() {
                 if game.has_user(author_id) {
                     //can't move on gameover
-                    if game.board.status() != BoardStatus::Ongoing {
+                    if game.status() != BoardStatus::Ongoing {
                         if let Err(e) = msg.channel_id.say(&ctx.http, format!("The game has ended.")).await {
                             error!("Error sending message: {e:?}");
                         }
@@ -318,9 +224,9 @@ impl EventHandler for Bot {
                     
                     let id_to_move = game.id_to_move();
 
-                    //gameover
-                    if game.board.status() != BoardStatus::Ongoing {
-                        if game.board.status() == BoardStatus::Checkmate {
+                    //game is over
+                    if game.status() != BoardStatus::Ongoing {
+                        if game.status() == BoardStatus::Checkmate {
                             if let Err(e) = msg.channel_id.say(&ctx.http, format!("Checkmate!")).await {
                                 error!("Error sending message: {e:?}");
                             }
@@ -337,11 +243,12 @@ impl EventHandler for Bot {
                         if let Err(e) = msg.channel_id.say(&ctx.http, format!("It is my turn, but I don't know how to play chess yet :(")).await {
                             error!("Error sending message: {e:?}");
                         }
+                        game.generate_hodgey_move();
                         return;
                     }
                     
                     //Check if the player is in check
-                    if game.board.checkers().popcnt() != 0 {
+                    if game.is_in_check() {
                         if let Err(e) = msg.channel_id.say(&ctx.http, format!("You are in check <@{id_to_move}>!")).await {
                             error!("Error sending message: {e:?}");
                         }
