@@ -77,6 +77,11 @@ impl EventHandler for Bot {
                 error!("Error sending message: {e:?}");
             }
         }
+        else if msg_lower == "hodgey val squad" {
+            if let Err(e) = msg.reply(&ctx.http, format!("{}", quotes::VAL_AGENTS.choose_multiple(&mut thread_rng(), 5).fold(String::new(), |cur, nxt| cur + "- " + nxt + "\n"))).await {
+                error!("Error sending message: {e:?}");
+            }
+        }
         else if msg_lower == "see" {
             if let Err(e) = msg.reply(&ctx.http, "said the blind man").await {
                 error!("Error sending message: {e:?}");
@@ -164,11 +169,20 @@ impl EventHandler for Bot {
                 HODGEY_BOT_ID
             };
 
+            let mut new_game = ChessGame::new_game_random_sides(author_id, opponent_id);
+            let white_id = new_game.white_id;
+            let black_id = new_game.black_id;
+
+            if white_id == HODGEY_BOT_ID {
+                let selected_move = new_game.generate_hodgey_move();
+                new_game.make_move(selected_move);
+            }
+
             let rw_lock = ctx.data.read().await;
             let mut chess_games = rw_lock.get::<ChessGames>().expect("ChessGames not in TypeMap.").lock().await;
             for game in chess_games.iter_mut() {
                 if game.has_user(author_id) {
-                    *game = ChessGame::new_game_random_sides(author_id, opponent_id);
+                    *game = new_game;
                     if let Err(e) = msg.reply(&ctx.http, format!("New game created!\nWhite: <@{}>\nBlack: <@{}>", game.white_id, game.black_id)).await {
                         error!("Error sending message: {e:?}");
                     }
@@ -178,16 +192,13 @@ impl EventHandler for Bot {
                     return;
                 }
             }
-            let game = ChessGame::new_game_random_sides(author_id, opponent_id);
-            let white_id = game.white_id;
-            let black_id = game.black_id;
-            chess_games.push(game);
+            chess_games.push(new_game.clone());
             drop(chess_games); // drop mutex lock as soon as possible
             if let Err(e) = msg.reply(&ctx.http, format!("New game created!\nWhite: <@{white_id}>\nBlack: <@{black_id}>")).await {
                 error!("Error sending message: {e:?}");
             }
             //Hardcoded link should be avoided here
-            if let Err(e) = msg.channel_id.say(&ctx.http, hodgey_chess::NEW_CHESS_GAME_LINK).await {
+            if let Err(e) = msg.channel_id.say(&ctx.http, new_game.to_link()).await {
                 error!("Error sending message: {e:?}");
             }
         }
@@ -222,37 +233,28 @@ impl EventHandler for Bot {
                         return
                     }
                     
-                    let id_to_move = game.id_to_move();
+                    let mut id_to_move = game.id_to_move();
 
-                    //game is over
+                    if game.status() == BoardStatus::Ongoing && id_to_move == HODGEY_BOT_ID {
+                        let selected_move = game.generate_hodgey_move();
+                        game.make_move(selected_move);
+                        id_to_move = game.id_to_move();
+                    }
+
+                    //check if game is over
                     if game.status() != BoardStatus::Ongoing {
                         if game.status() == BoardStatus::Checkmate {
-                            if let Err(e) = msg.channel_id.say(&ctx.http, format!("Checkmate!")).await {
+                            if let Err(e) = msg.channel_id.say(&ctx.http, "Checkmate!").await {
                                 error!("Error sending message: {e:?}");
                             }
                         }
                         else {
-                            if let Err(e) = msg.channel_id.say(&ctx.http, format!("Stalemate!")).await {
-                                error!("Error sending message: {e:?}");
-                            }
-                        }
-                        return;
-                    }
-
-                    if id_to_move == HODGEY_BOT_ID {
-                        let selected_move = game.generate_hodgey_move();
-                        if let Some(selected_move) = selected_move {
-                            game.make_move(selected_move);
-                        }
-                        else {
-                            if let Err(e) = msg.channel_id.say(&ctx.http, format!("I can't seem to think of a move")).await {
+                            if let Err(e) = msg.channel_id.say(&ctx.http, "Stalemate!").await {
                                 error!("Error sending message: {e:?}");
                             }
                         }
                     }
-                    
-                    //Check if the player is in check
-                    if game.is_in_check() {
+                    else if game.is_in_check() {
                         if let Err(e) = msg.channel_id.say(&ctx.http, format!("You are in check <@{id_to_move}>!")).await {
                             error!("Error sending message: {e:?}");
                         }

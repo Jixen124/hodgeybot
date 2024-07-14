@@ -5,15 +5,13 @@ use rand::{Rng, thread_rng, seq::IteratorRandom};
 
 pub use chess::BoardStatus;
 
-//Having this link hardcoded is bad, I should it fix later
-pub const NEW_CHESS_GAME_LINK: &str = "https://www.chess.com/dynboard?fen=rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR&board=bases&piece=classic&size=3&coordinates=1";
-
 pub struct ChessGames;
 
 impl TypeMapKey for ChessGames {
     type Value = Mutex<Vec<ChessGame>>;
 }
 
+#[derive(Clone)]
 pub struct ChessGame {
     pub white_id: u64,
     pub black_id: u64,
@@ -86,13 +84,13 @@ impl ChessGame {
         }
     }
 
-    pub fn generate_hodgey_move(&mut self) -> Option<ChessMove> {
+    pub fn generate_hodgey_move(&mut self) -> ChessMove {
         let moves = MoveGen::new_legal(&self.board);
-        moves.choose(&mut thread_rng())
+        moves.choose(&mut thread_rng()).unwrap() //This shouldn't be able to fail if the game isn't over
     }
 
     pub fn is_in_check(&self) -> bool {
-        self.board.checkers().popcnt() > 0
+        self.board.checkers().popcnt() > 0 //Checks if the number of pieces checking is greater than 0
     }
 
     pub fn to_link(&self) -> String {
