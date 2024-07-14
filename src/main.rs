@@ -95,7 +95,30 @@ impl EventHandler for Bot {
         else if msg_lower == "chess resign" || msg_lower ==  "chess surrender" {
             let rw_lock = ctx.data.read().await;
             let mut chess_games = rw_lock.get::<ChessGames>().expect("ChessGames not in TypeMap.").lock().await;
-            chess_games.retain(|game| game.has_user(msg.author.id.get()));
+            let mut opponent_id: Option<u64> = None;
+            chess_games.retain(|game| {
+                match game.has_user(msg.author.id.get()) {
+                    true => {
+                        opponent_id = Some(game.id_to_move());
+                        true
+                    },
+                    false => false
+                }
+            });
+
+            if let Some(opponent_id) = opponent_id {
+                if opponent_id == HODGEY_BOT_ID {
+                    if let Err(e) = msg.channel_id.say(&ctx.http, "I WIN!").await {
+                        error!("Error sending message: {e:?}");
+                    }
+                }
+                else if let Err(e) = msg.channel_id.say(&ctx.http, format!("<@{opponent_id}> wins!")).await {
+                    error!("Error sending message: {e:?}");
+                }
+            }
+            else if let Err(e) = msg.reply(&ctx.http, quotes::NO_ACTIVE_CHESS_GAME).await {
+                error!("Error sending message: {e:?}");
+            }
         }
         else if msg_lower == "toggle coordinates" {
             let rw_lock = ctx.data.read().await;
