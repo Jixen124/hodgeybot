@@ -97,13 +97,15 @@ impl EventHandler for Bot {
             let mut chess_games = rw_lock.get::<ChessGames>().expect("ChessGames not in TypeMap.").lock().await;
             let mut opponent_id: Option<u64> = None;
             chess_games.retain(|game| {
-                match game.has_user(msg.author.id.get()) {
-                    true => {
-                        opponent_id = Some(game.id_waiting_for_turn());
-                        false
-                    },
-                    false => true
+                if game.has_user(msg.author.id.get()) {
+                    if game.white_id == msg.author.id.get() {
+                        opponent_id = Some(game.black_id)
+                    }
+                    else {
+                        opponent_id = Some(game.white_id)
+                    };
                 }
+                game.has_user(msg.author.id.get())
             });
 
             if let Some(opponent_id) = opponent_id {

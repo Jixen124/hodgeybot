@@ -76,13 +76,6 @@ impl ChessGame {
         }
     }
 
-    pub fn id_waiting_for_turn(&self) -> u64 {
-        match self.chess.turn() {
-            Color::White => self.black_id,
-            Color::Black => self.white_id
-        }
-    }
-
     pub fn make_move_unchecked(&mut self, selected_move: Move) {
         self.chess.play_unchecked(&selected_move);
     }
