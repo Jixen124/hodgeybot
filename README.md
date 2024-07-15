@@ -7,7 +7,7 @@ Stupid discord bot by Jixen.
 * Make hodgey bot be listening to SONGS
 * Hodgey stats
 * Reactions to certain users? maybe, idk if it is needed anymore
-* Check is user has admin
+* Check if user has admin
 * Set Message Channel
 * Hodgey refuse
 * Hodgey suggest
@@ -30,7 +30,6 @@ Stupid discord bot by Jixen.
 * DELETED_CHANNEL_QUOTES
 * Get mad about messages being deleted
 
-### Chess
+#### Chess
 * Make it so players can't be drafted to 2 games at once
 * Make it so that hodgey can play
-* Add option to surrender
