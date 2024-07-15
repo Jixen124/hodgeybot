@@ -99,7 +99,7 @@ impl EventHandler for Bot {
             chess_games.retain(|game| {
                 match game.has_user(msg.author.id.get()) {
                     true => {
-                        opponent_id = Some(game.id_to_move());
+                        opponent_id = Some(game.id_waiting_for_turn());
                         true
                     },
                     false => false

@@ -54,6 +54,13 @@ impl ChessGame {
         }
     }
 
+    pub fn id_waiting_for_turn(&self) -> u64 {
+        match self.board.side_to_move() {
+            Color::White => self.black_id,
+            Color::Black => self.white_id
+        }
+    }
+
     pub fn make_move(&mut self, selected_move: ChessMove) {
         self.board = self.board.make_move_new(selected_move);
     }
