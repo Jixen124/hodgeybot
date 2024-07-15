@@ -252,21 +252,23 @@ impl EventHandler for Bot {
                         return;
                     }
                     
-                    let legal_move = game.legal_move_from_str(&move_str);
-                    if let Err(move_error) = legal_move {
-                        match move_error {
-                            MoveError::InvalidMove => {
-                                if let Err(e) = msg.reply(&ctx.http, "I don't understand the move you are trying to make").await {
-                                    error!("Error sending message: {e:?}");
-                                }
-                            },
-                            MoveError::IllegalMove => {
-                                if let Err(e) = msg.reply(&ctx.http, "That's an illegal move").await {
-                                    error!("Error sending message: {e:?}");
-                                }
+                    let selected_move = game.legal_move_from_str(&move_str);
+                    match selected_move {
+                        Err(MoveError::InvalidMove) => {
+                            if let Err(e) = msg.reply(&ctx.http, "I don't understand the move you are trying to make").await {
+                                error!("Error sending message: {e:?}");
                             }
+                            return;
+                        },
+                        Err(MoveError::IllegalMove) => {
+                            if let Err(e) = msg.reply(&ctx.http, "That's an illegal move").await {
+                                error!("Error sending message: {e:?}");
+                            }
+                            return;
+                        },
+                        Ok(legal_move) => {
+                            game.make_move_unchecked(legal_move);
                         }
-                        return
                     }
                     
                     let mut id_to_move = game.id_to_move();
