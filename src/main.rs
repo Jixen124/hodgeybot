@@ -11,7 +11,7 @@ use rand::{Rng, thread_rng, seq::SliceRandom};
 mod quotes;
 mod jokes;
 mod hodgey_chess;
-use hodgey_chess::{ChessGame, ChessGames, BoardStatus};
+use hodgey_chess::{ChessGame, ChessGames, MoveError};
 
 const HODGEY_BOT_ID: u64 = 873373606900559943;
 
@@ -100,9 +100,9 @@ impl EventHandler for Bot {
                 match game.has_user(msg.author.id.get()) {
                     true => {
                         opponent_id = Some(game.id_waiting_for_turn());
-                        true
+                        false
                     },
-                    false => false
+                    false => true
                 }
             });
 
@@ -198,7 +198,7 @@ impl EventHandler for Bot {
 
             if white_id == HODGEY_BOT_ID {
                 let selected_move = new_game.generate_hodgey_move();
-                new_game.make_move(selected_move);
+                new_game.make_move_unchecked(selected_move);
             }
 
             let rw_lock = ctx.data.read().await;
@@ -236,7 +236,7 @@ impl EventHandler for Bot {
             for game in chess_games.iter_mut() {
                 if game.has_user(author_id) {
                     //can't move on gameover
-                    if game.status() != BoardStatus::Ongoing {
+                    if game.gameover() {
                         if let Err(e) = msg.channel_id.say(&ctx.http, format!("The game has ended.")).await {
                             error!("Error sending message: {e:?}");
                         }
@@ -249,32 +249,36 @@ impl EventHandler for Bot {
                         }
                         return;
                     }
-                    if game.make_move_from_str(&move_str).is_err() {
-                        if let Err(e) = msg.reply(&ctx.http, "I don't understand the move you are trying to make (or it is illegal)").await {
-                            error!("Error sending message: {e:?}");
+                    
+                    let legal_move = game.legal_move_from_str(&move_str);
+                    if let Err(move_error) = legal_move {
+                        match move_error {
+                            MoveError::InvalidMove => {
+                                if let Err(e) = msg.reply(&ctx.http, "I don't understand the move you are trying to make").await {
+                                    error!("Error sending message: {e:?}");
+                                }
+                            },
+                            MoveError::IllegalMove => {
+                                if let Err(e) = msg.reply(&ctx.http, "That's an illegal move").await {
+                                    error!("Error sending message: {e:?}");
+                                }
+                            }
                         }
                         return
                     }
                     
                     let mut id_to_move = game.id_to_move();
 
-                    if game.status() == BoardStatus::Ongoing && id_to_move == HODGEY_BOT_ID {
+                    if !game.gameover() && id_to_move == HODGEY_BOT_ID {
                         let selected_move = game.generate_hodgey_move();
-                        game.make_move(selected_move);
+                        game.make_move_unchecked(selected_move);
                         id_to_move = game.id_to_move();
                     }
 
                     //check if game is over
-                    if game.status() != BoardStatus::Ongoing {
-                        if game.status() == BoardStatus::Checkmate {
-                            if let Err(e) = msg.channel_id.say(&ctx.http, "Checkmate!").await {
-                                error!("Error sending message: {e:?}");
-                            }
-                        }
-                        else {
-                            if let Err(e) = msg.channel_id.say(&ctx.http, "Stalemate!").await {
-                                error!("Error sending message: {e:?}");
-                            }
+                    if game.gameover() {
+                        if let Err(e) = msg.channel_id.say(&ctx.http, game.get_gameover_message()).await {
+                            error!("Error sending message: {e:?}");
                         }
                     }
                     else if game.is_in_check() {
