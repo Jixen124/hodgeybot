@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 
-use shakmaty::{Chess, Position, Board, Role, Move};
+use shakmaty::{Chess, Position, Board, Move};
 
 pub fn find_best_move(chess: &Chess) -> Move {
     let moves = chess.legal_moves();
@@ -11,7 +11,7 @@ pub fn find_best_move(chess: &Chess) -> Move {
     for m in moves {
         let mut new_chess = chess.clone();
         new_chess.play_unchecked(&m);
-        let score = -nega_max(&new_chess, 4, f32::NEG_INFINITY, f32::INFINITY, -color);
+        let score = -nega_max(&new_chess, 5, f32::NEG_INFINITY, f32::INFINITY, -color);
         if score > best_score {
             best_score = score;
             best_move = Some(m)
@@ -70,19 +70,19 @@ pub fn nega_max(chess: &Chess, depth: usize, mut alpha: f32, beta: f32, color: i
 
 fn evaluate_position(board: &Board) -> f32 {
     let mut score = 0.0;
-    for (_, piece) in board.clone().into_iter() {
-        let multiplier = if piece.color.is_white() {1.0} else {-1.0};
-        let role_value = match piece.role {
-            Role::Pawn => 1.0,
-            Role::Bishop => 3.0,
-            Role::Knight => 3.0,
-            Role::Rook => 5.0,
-            Role::Queen => 9.0,
-            Role::King => 0.0
-        };
 
-        score += role_value * multiplier;
-    }
+    score += 1.0 * board.white().intersect(board.pawns()).count() as f32;
+    score += 3.0 * board.white().intersect(board.bishops()).count() as f32;
+    score += 3.0 * board.white().intersect(board.knights()).count() as f32;
+    score += 5.0 * board.white().intersect(board.rooks()).count() as f32;
+    score += 9.0 * board.white().intersect(board.queens()).count() as f32;
+
+    score -= 1.0 * board.black().intersect(board.pawns()).count() as f32;
+    score -= 3.0 * board.black().intersect(board.bishops()).count() as f32;
+    score -= 3.0 * board.black().intersect(board.knights()).count() as f32;
+    score -= 5.0 * board.black().intersect(board.rooks()).count() as f32;
+    score -= 9.0 * board.black().intersect(board.queens()).count() as f32;
+    
     score
 }
 
