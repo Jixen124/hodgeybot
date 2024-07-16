@@ -1,6 +1,5 @@
 use std::cmp::Ordering;
-
-use shakmaty::{Chess, Position, Board, Move};
+use shakmaty::{zobrist::ZobristHash, Board, Chess, Color, Move, Outcome, Position};
 
 pub fn find_best_move(chess: &Chess) -> Move {
     let moves = chess.legal_moves();
@@ -26,7 +25,20 @@ pub fn find_best_move(chess: &Chess) -> Move {
 }
 
 pub fn nega_max(chess: &Chess, depth: usize, mut alpha: f32, beta: f32, color: i32) -> f32 {
-    //I need to add a test for gameover
+    //Confirm this works
+    if let Some(outcome) = chess.outcome() {
+        return match outcome {
+            Outcome::Draw => 0.0,
+            Outcome::Decisive { winner } => {
+                if winner == Color::White && color == 1 || winner == Color::Black && color == -1 {
+                    f32::INFINITY
+                }
+                else {
+                    f32::NEG_INFINITY
+                }
+            }
+        }
+    }
 
     if depth == 0 {
         return evaluate_position(chess.board()) * color as f32;
@@ -37,12 +49,13 @@ pub fn nega_max(chess: &Chess, depth: usize, mut alpha: f32, beta: f32, color: i
     let mut moves = chess.legal_moves();
     
     moves.sort_unstable_by(|a, b| {
-        let a = a.is_capture();
-        let b = b.is_capture();
-        if a && !b {
+        let a_is_interesting = a.is_capture() || a.is_promotion();
+        let b_is_interesting = b.is_capture() || b.is_promotion();
+
+        if a_is_interesting && !b_is_interesting {
             Ordering::Less
         }
-        else if b && !a {
+        else if b_is_interesting && !a_is_interesting {
             Ordering::Greater
         }
         else {
@@ -59,7 +72,7 @@ pub fn nega_max(chess: &Chess, depth: usize, mut alpha: f32, beta: f32, color: i
             if max > alpha {
                 alpha = max;
                 if alpha >= beta {
-                    return max;
+                    break;
                 }
             }
         }
