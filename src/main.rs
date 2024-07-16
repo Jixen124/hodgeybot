@@ -10,8 +10,8 @@ use tracing::{error, info};
 use rand::{Rng, thread_rng, seq::SliceRandom};
 mod quotes;
 mod jokes;
-mod hodgey_chess;
-use hodgey_chess::{ChessGame, ChessGames, MoveError};
+mod chess;
+use chess::{ChessGame, ChessGames, MoveError};
 
 const HODGEY_BOT_ID: u64 = 873373606900559943;
 
@@ -199,7 +199,7 @@ impl EventHandler for Bot {
             let black_id = new_game.black_id;
 
             if white_id == HODGEY_BOT_ID {
-                let selected_move = new_game.generate_hodgey_move();
+                let selected_move = new_game.find_best_move();
                 new_game.make_move_unchecked(selected_move);
             }
 
@@ -274,7 +274,7 @@ impl EventHandler for Bot {
                     let mut id_to_move = game.id_to_move();
 
                     if !game.gameover() && id_to_move == HODGEY_BOT_ID {
-                        let selected_move = game.generate_hodgey_move();
+                        let selected_move = game.find_best_move();
                         game.make_move_unchecked(selected_move);
                         id_to_move = game.id_to_move();
                     }

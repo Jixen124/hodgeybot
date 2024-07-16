@@ -2,7 +2,9 @@ use shakmaty::san::{ParseSanError, San, SanError};
 use shakmaty::{Bitboard, Chess, Color, Move, Position};
 use shakmaty::uci::{IllegalUciMoveError, UciMove};
 use serenity::prelude::*;
-use rand::{Rng, thread_rng, seq::IteratorRandom};
+use rand::{Rng, thread_rng};
+
+mod search;
 
 pub struct ChessGames;
 
@@ -44,8 +46,7 @@ pub struct ChessGame {
 
 impl ChessGame {
     pub fn new_game_random_sides(player1_id: u64, player2_id: u64) -> Self {
-        let mut rng = thread_rng();
-        if rng.gen_bool(0.5) {
+        if thread_rng().gen_bool(0.5) {
             Self {
                 white_id: player1_id,
                 black_id: player2_id,
@@ -80,7 +81,7 @@ impl ChessGame {
         self.chess.play_unchecked(&selected_move);
     }
 
-    pub fn legal_move_from_str(&mut self, move_str: &str) -> Result<Move, MoveError> {
+    pub fn legal_move_from_str(&self, move_str: &str) -> Result<Move, MoveError> {
         if let Ok(selected_move) = UciMove::from_ascii(move_str.as_bytes()) {
             let legal_move = selected_move.to_move(&self.chess)?;
             return Ok(legal_move)
@@ -91,9 +92,8 @@ impl ChessGame {
         Ok(legal_move)
     }
 
-    pub fn generate_hodgey_move(&mut self) -> Move {
-        let moves = self.chess.legal_moves();
-        moves.into_iter().choose(&mut thread_rng()).expect("There should be a legal move")
+    pub fn find_best_move(&self) -> Move {
+        search::find_best_move(&self.chess)
     }
 
     pub fn is_in_check(&self) -> bool {
