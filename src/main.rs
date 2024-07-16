@@ -205,6 +205,24 @@ impl EventHandler for Bot {
 
             let rw_lock = ctx.data.read().await;
             let mut chess_games = rw_lock.get::<ChessGames>().expect("ChessGames not in TypeMap.").lock().await;
+            
+            //Check opponent isn't already in a game
+            if opponent_id != HODGEY_BOT_ID {
+                for game in chess_games.iter() {
+                    if game.has_user(opponent_id) {
+                        if game.has_user(author_id) {
+                            break;
+                        }
+                        else {
+                            if let Err(e) = msg.channel_id.say(&ctx.http, "Opponent is in another game. If they wish to leave they can resign with \"chess resign\"").await {
+                                error!("Error sending message: {e:?}");
+                            }
+                            return;
+                        }
+                    }
+                }
+            }
+            
             for game in chess_games.iter_mut() {
                 if game.has_user(author_id) {
                     *game = new_game;

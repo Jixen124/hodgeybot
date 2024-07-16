@@ -31,5 +31,5 @@ Stupid discord bot by Jixen.
 * Get mad about messages being deleted
 
 #### Chess
-* Make it so players can't be drafted to 2 games at once
-* Make it so that hodgey can play
+* Make hodgey faster
+* Add 50 move rule and draw by repetition
