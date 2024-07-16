@@ -105,7 +105,7 @@ impl EventHandler for Bot {
                         opponent_id = Some(game.white_id)
                     };
                 }
-                game.has_user(msg.author.id.get())
+                !game.has_user(msg.author.id.get())
             });
 
             if let Some(opponent_id) = opponent_id {
