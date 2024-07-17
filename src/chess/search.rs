@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use shakmaty::{Board, Chess, Color, Move, Outcome, Position};
+use shakmaty::{Board, Chess, Color, Move, Outcome, Position, Role};
 
 const INFINITY: isize = isize::MAX;
 const NEG_INFINITY: isize = isize::MIN +1;
@@ -84,61 +84,73 @@ pub fn nega_max(chess: &Chess, depth: usize, mut alpha: isize, beta: isize, colo
     max
 }
 
-//Piece square tables from https://github.com/terredeciels/TSCP/blob/master/eval.c
+//Piece square tables from https://www.chessprogramming.org/Simplified_Evaluation_Function
 
 const PAWN_PCSQ: [isize; 64] = [
-    0,   0,  0,    0,   0,   0,   0,   0,
-  105, 110, 115, 120, 120, 115, 110, 105,
-  104, 108, 112, 116, 116, 112, 108, 104,
-  103, 106, 109, 112, 112, 109, 106, 103,
-  102, 104, 106, 108, 108, 106, 104, 102,
-  101, 102, 103,  90,  90,   3, 102, 101,
-  100, 100, 100,  60,  60, 100, 100, 100,
+    0,   0,   0,   0,   0,   0,   0,   0,
+  150, 150, 150, 150, 150, 150, 150, 150,
+  110, 110, 120, 130, 130, 120, 110, 110,
+  105, 105, 110, 125, 125, 110, 105, 105,
+  100, 100, 100, 120, 120, 100, 100, 100,
+  105,  95,  90, 100, 100,  90,  95, 105,
+  105, 110, 110,  80,  80, 110, 110, 105,
     0,   0,   0,   0,   0,   0,   0,   0
 ];
 
 const KNIGHT_PCSQ: [isize; 64] = [
-  290, 290, 290, 290, 290, 290, 290, 290,
-  290, 300, 300, 300, 300, 300, 300, 290,
-  290, 300, 305, 305, 305, 305, 300, 290,
-  290, 300, 305, 310, 310, 305, 300, 290,
-  290, 300, 305, 310, 310, 305, 300, 290,
-  290, 300, 305, 305, 305, 305, 300, 290,
-  290, 300, 300, 300, 300, 300, 300, 290,
-  290, 270, 290, 290, 290, 290, 270, 290
+  250, 260, 270, 270, 270, 270, 260, 250,
+  260, 280, 300, 300, 300, 300, 280, 260,
+  270, 300, 310, 315, 315, 310, 300, 270,
+  270, 305, 315, 320, 320, 315, 305, 270,
+  270, 300, 315, 320, 320, 315, 300, 270,
+  270, 305, 310, 315, 315, 310, 305, 270,
+  260, 280, 300, 305, 305, 300, 280, 260,
+  250, 260, 270, 270, 270, 270, 260, 250
 ];
 
 const BISHOP_PCSQ: [isize; 64] = [
-  290, 290, 290, 290, 290, 290, 290, 290,
+  280, 290, 290, 290, 290, 290, 290, 280,
   290, 300, 300, 300, 300, 300, 300, 290,
-  290, 300, 305, 305, 305, 305, 300, 290,
   290, 300, 305, 310, 310, 305, 300, 290,
-  290, 300, 305, 310, 310, 305, 300, 290,
-  290, 300, 305, 305, 305, 305, 300, 290,
-  290, 300, 300, 300, 300, 300, 300, 290,
-  290, 290, 280, 290, 290, 280, 290, 290
+  290, 305, 305, 310, 310, 305, 305, 290,
+  290, 300, 310, 310, 310, 310, 300, 290,
+  290, 310, 310, 310, 310, 310, 310, 290,
+  290, 305, 300, 300, 300, 300, 305, 290,
+  280, 290, 290, 290, 290, 290, 290, 280
+];
+
+const ROOK_PCSQ: [isize; 64] = [
+  500, 500, 500, 500, 500, 500, 500, 500,
+  505, 510, 510, 510, 510, 510, 510, 505,
+  495, 500, 500, 500, 500, 500, 500, 495,
+  495, 500, 500, 500, 500, 500, 500, 495,
+  495, 500, 500, 500, 500, 500, 500, 495,
+  495, 500, 500, 500, 500, 500, 500, 495,
+  495, 500, 500, 500, 500, 500, 500, 495,
+  500, 500, 500, 505, 505, 500, 500, 500
+];
+
+
+const QUEEN_PCSQ: [isize; 64] = [
+  880, 890, 890, 895, 895, 890, 890, 880,
+  890, 900, 900, 900, 900, 900, 900, 890,
+  890, 900, 905, 905, 905, 905, 900, 890,
+  895, 900, 905, 905, 905, 905, 900, 895,
+  900, 900, 905, 905, 905, 905, 900, 895,
+  890, 905, 905, 905, 905, 905, 900, 890,
+  890, 900, 905, 900, 900, 900, 900, 890,
+  880, 890, 890, 895, 895, 890, 890, 880
 ];
 
 const KING_PCSQ: [isize; 64] = [
-  -40, -40, -40, -40, -40, -40, -40, -40,
-  -40, -40, -40, -40, -40, -40, -40, -40,
-  -40, -40, -40, -40, -40, -40, -40, -40,
-  -40, -40, -40, -40, -40, -40, -40, -40,
-  -40, -40, -40, -40, -40, -40, -40, -40,
-  -40, -40, -40, -40, -40, -40, -40, -40,
-  -20, -20, -20, -20, -20, -20, -20, -20,
-    0,  20,  40, -20,   0, -20,  40,  20
-];
-
-const FLIP: [usize; 64] = [
-    56,  57,  58,  59,  60,  61,  62,  63,
-    48,  49,  50,  51,  52,  53,  54,  55,
-    40,  41,  42,  43,  44,  45,  46,  47,
-    32,  33,  34,  35,  36,  37,  38,  39,
-    24,  25,  26,  27,  28,  29,  30,  31,
-    16,  17,  18,  19,  20,  21,  22,  23,
-     8,   9,  10,  11,  12,  13,  14,  15,
-     0,   1,   2,   3,   4,   5,   6,   7
+    -30,-40,-40,-50,-50,-40,-40,-30,
+    -30,-40,-40,-50,-50,-40,-40,-30,
+    -30,-40,-40,-50,-50,-40,-40,-30,
+    -30,-40,-40,-50,-50,-40,-40,-30,
+    -20,-30,-30,-40,-40,-30,-30,-20,
+    -10,-20,-20,-20,-20,-20,-20,-10,
+     20, 20,  0,  0,  0,  0, 20, 20,
+     20, 30, 10,  0,  0, 10, 30, 20    
 ];
 
 fn evaluate_position(board: &Board) -> isize {
@@ -153,31 +165,30 @@ fn evaluate_position(board: &Board) -> isize {
     for square in board.white().intersect(board.knights()) {
         score += KNIGHT_PCSQ[square as usize];
     }
+    for square in board.white().intersect(board.rooks()) {
+        score += ROOK_PCSQ[square as usize];
+    }
+    for square in board.white().intersect(board.queens()) {
+        score += QUEEN_PCSQ[square as usize];
+    }
     score += KING_PCSQ[board.king_of(Color::White).unwrap() as usize];
 
     for square in board.black().intersect(board.pawns()) {
-        score -= PAWN_PCSQ[FLIP[square as usize]];
+        score -= PAWN_PCSQ[square as usize ^ 56];
     }
     for square in board.black().intersect(board.bishops()) {
-        score -= BISHOP_PCSQ[FLIP[square as usize]];
+        score -= BISHOP_PCSQ[square as usize ^ 56];
     }
     for square in board.black().intersect(board.knights()) {
-        score -= KNIGHT_PCSQ[FLIP[square as usize]];
+        score -= KNIGHT_PCSQ[square as usize ^ 56];
     }
-    score += KING_PCSQ[FLIP[board.king_of(Color::Black).unwrap() as usize]];
-
-    //score += 100 * board.white().intersect(board.pawns()).count() as isize;
-    // score += 300 * board.white().intersect(board.bishops()).count() as isize;
-    // score += 300 * board.white().intersect(board.knights()).count() as isize;
-    score += 500 * board.white().intersect(board.rooks()).count() as isize;
-    score += 900 * board.white().intersect(board.queens()).count() as isize;
-
-    // score -= 100 * board.black().intersect(board.pawns()).count() as isize;
-    // score -= 300 * board.black().intersect(board.bishops()).count() as isize;
-    // score -= 300 * board.black().intersect(board.knights()).count() as isize;
-    score -= 500 * board.black().intersect(board.rooks()).count() as isize;
-    score -= 900 * board.black().intersect(board.queens()).count() as isize;
-    
+    for square in board.black().intersect(board.rooks()) {
+        score -= ROOK_PCSQ[square as usize ^ 56];
+    }
+    for square in board.black().intersect(board.queens()) {
+        score -= QUEEN_PCSQ[square as usize ^ 56];
+    }
+    score -= KING_PCSQ[board.king_of(Color::Black).unwrap() as usize ^ 56];
     score
 }
 
