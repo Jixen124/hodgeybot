@@ -292,6 +292,7 @@ impl EventHandler for Bot {
                     let mut id_to_move = game.id_to_move();
 
                     if !game.gameover() && id_to_move == HODGEY_BOT_ID {
+                        let _ = msg.react(&ctx.http, '👍').await;
                         let selected_move = game.find_best_move();
                         game.make_move_unchecked(selected_move);
                         id_to_move = game.id_to_move();
