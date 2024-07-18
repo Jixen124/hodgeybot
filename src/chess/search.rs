@@ -4,7 +4,7 @@ use shakmaty::{Board, Chess, Color, Move, Outcome, Position, Role};
 const INFINITY: isize = isize::MAX;
 const NEG_INFINITY: isize = isize::MIN +1;
 
-pub fn find_best_move(chess: &Chess) -> Move {
+pub fn find_best_move(chess: &Chess, depth: usize) -> Move {
     let moves = chess.legal_moves();
     let mut best_score = NEG_INFINITY;
     let mut best_move = None;
@@ -13,7 +13,7 @@ pub fn find_best_move(chess: &Chess) -> Move {
     for m in moves {
         let mut new_chess = chess.clone();
         new_chess.play_unchecked(&m);
-        let score = -nega_max(&new_chess, 6, NEG_INFINITY, INFINITY, -color);
+        let score = -nega_max(&new_chess, depth, NEG_INFINITY, INFINITY, -color);
         if score > best_score {
             best_score = score;
             best_move = Some(m)
@@ -27,17 +27,31 @@ pub fn find_best_move(chess: &Chess) -> Move {
     panic!("NO BEST MOVE");
 }
 
+const fn calculate_move_score(m: &Move) -> isize {
+    let mut score = if m.is_promotion() {60} else {0};
+    if let Some(role) = m.capture() {
+        score += match role {
+            Role::Pawn => 10,
+            Role::Bishop => 30,
+            Role::Knight => 30,
+            Role::Rook => 50,
+            _ => 90
+        }
+    }
+    score
+}
+
 pub fn nega_max(chess: &Chess, depth: usize, mut alpha: isize, beta: isize, color: isize) -> isize {
     //Confirm this works
     if let Some(outcome) = chess.outcome() {
         return match outcome {
             Outcome::Draw => 0,
             Outcome::Decisive { winner } => {
-                if winner == Color::White && color == 1 || winner == Color::Black && color == -1 {
-                    INFINITY
+                color * if winner == Color::White {
+                    1_000_000 + depth as isize
                 }
                 else {
-                    NEG_INFINITY
+                    -1_000_000 - depth as isize
                 }
             }
         }
@@ -52,6 +66,19 @@ pub fn nega_max(chess: &Chess, depth: usize, mut alpha: isize, beta: isize, colo
     let mut moves = chess.legal_moves();
     
     moves.sort_unstable_by(|a, b| {
+        // let a_score = calculate_move_score(a);
+        // let b_score = calculate_move_score(b);
+
+        // if a_score > b_score {
+        //     Ordering::Less
+        // }
+        // else if a_score < b_score {
+        //     Ordering::Greater
+        // }
+        // else {
+        //     Ordering::Equal
+        // }
+
         let a_is_interesting = a.is_capture() || a.is_promotion();
         let b_is_interesting = b.is_capture() || b.is_promotion();
 
@@ -192,15 +219,18 @@ fn evaluate_position(board: &Board) -> isize {
     score
 }
 
-#[cfg(test)]
-mod tests {
-    use std::time::Instant;
-    use shakmaty::Chess;
+// #[cfg(test)]
+// mod tests {
+//     use shakmaty::fen::Fen;
+//     use shakmaty::{CastlingMode, Chess, FromSetup};
+//     use super::super::test_fens;
 
-    #[test]
-    fn time() {
-        let start_time = Instant::now();
-        super::find_best_move(&Chess::new());
-        println!("Time: {}", Instant::now().duration_since(start_time).as_millis());
-    }
-}
+//     #[test]
+//     fn test_fens_time() {
+//         for fen in test_fens::WIN_AT_CHESS {
+//             let setup = Fen::from_ascii(fen.as_bytes()).expect("Fen should be valid").0;
+//             let chess = Chess::from_setup(setup, CastlingMode::Standard).expect("position should be valid");
+//             super::find_best_move(&chess, 3);
+//         }
+//     }
+// }

@@ -12,3 +12,6 @@ tokio = "1"
 tracing = "0.1"
 rand = "0.8"
 shakmaty = "0.27.1"
+
+[profile.test]
+inherits = "release"

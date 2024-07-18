@@ -5,6 +5,7 @@ use serenity::prelude::*;
 use rand::{Rng, thread_rng};
 
 mod search;
+mod test_fens;
 
 pub struct ChessGames;
 
@@ -93,7 +94,7 @@ impl ChessGame {
     }
 
     pub fn find_best_move(&self) -> Move {
-        search::find_best_move(&self.chess)
+        search::find_best_move(&self.chess, 6)
     }
 
     pub fn is_in_check(&self) -> bool {
