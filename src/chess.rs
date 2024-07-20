@@ -5,7 +5,6 @@ use serenity::prelude::*;
 use rand::{Rng, thread_rng};
 
 mod search;
-mod test_fens;
 
 pub struct ChessGames;
 

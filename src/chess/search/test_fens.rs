@@ -1,3 +1,4 @@
+#![allow(unused)]
 pub const WIN_AT_CHESS: [&str; 300] = [
     "2rr3k/pp3pp1/1nnqbN1p/3pN3/2pP4/2P3Q1/PPB4P/R4RK1 w - - ",
     "8/7p/5k2/5p2/p1p2P2/Pr1pPK2/1P1R3P/8 b - - ",
