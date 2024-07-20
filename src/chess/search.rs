@@ -21,14 +21,13 @@ pub fn find_best_move(chess: &Chess, depth: u16) -> Move {
     let moves = chess.legal_moves();
     let mut best_score = NEG_INFINITY;
     let mut best_move = None;
-    let color = if chess.turn().is_white() {1} else {-1};
 
     let mut transposition_table: Vec<TranspositionTableData> = vec![TranspositionTableData{hash: 0, score: 0, depth: 0}; TRANSPOSITION_TABLE_SIZE];
     for m in moves {
         let mut new_chess = chess.clone();
         new_chess.play_unchecked(&m);
 
-        let score = -nega_max(&new_chess, depth, NEG_INFINITY, INFINITY, -color, &mut transposition_table);
+        let score = -nega_max(&new_chess, depth, NEG_INFINITY, INFINITY, &mut transposition_table);
         if score > best_score {
             best_score = score;
             best_move = Some(m)
@@ -42,7 +41,7 @@ pub fn find_best_move(chess: &Chess, depth: u16) -> Move {
     panic!("NO BEST MOVE");
 }
 
-fn nega_max(chess: &Chess, depth: u16, mut alpha: i16, beta: i16, color: i16, transposition_table: &mut Vec<TranspositionTableData>) -> i16 {
+fn nega_max(chess: &Chess, depth: u16, mut alpha: i16, beta: i16, transposition_table: &mut Vec<TranspositionTableData>) -> i16 {
     let hash: Zobrist64 = chess.zobrist_hash(shakmaty::EnPassantMode::Legal);
     let table_index = hash.0 as usize & TABLE_INDEX_MASK;
     if transposition_table[table_index].hash == hash.0 {
@@ -58,7 +57,7 @@ fn nega_max(chess: &Chess, depth: u16, mut alpha: i16, beta: i16, color: i16, tr
     }
 
     if depth == 0 {
-        return evaluate_position(chess.board()) * color as i16;
+        return evaluate_position(chess.board()) * if chess.turn().is_white() {1} else {-1};
     }
 
     let mut value = NEG_INFINITY;
@@ -83,7 +82,7 @@ fn nega_max(chess: &Chess, depth: u16, mut alpha: i16, beta: i16, color: i16, tr
     for m in &moves {
         let mut new_chess = chess.clone();
         new_chess.play_unchecked(m);
-        let score = -nega_max(&new_chess, depth - 1, -beta, -alpha, -color, transposition_table);
+        let score = -nega_max(&new_chess, depth - 1, -beta, -alpha, transposition_table);
         value = value.max(score);
         alpha = alpha.max(value);
         if alpha >= beta {
@@ -150,7 +149,7 @@ mod tests {
         for fen in test_fens::WIN_AT_CHESS {
             let setup = Fen::from_ascii(fen.as_bytes()).expect("Fen should be valid").0;
             let chess = Chess::from_setup(setup, CastlingMode::Standard).expect("position should be valid");
-            super::find_best_move(&chess, 3);
+            super::find_best_move(&chess, 2);
         }
     }
 

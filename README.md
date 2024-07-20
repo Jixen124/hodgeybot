@@ -31,5 +31,7 @@ Stupid discord bot by Jixen.
 * Get mad about messages being deleted
 
 #### Chess
-* Make hodgey faster
 * Add 50 move rule and draw by repetition
+* Make O-O work with 0-0 and o-o
+* Improve transposition table
+* Add iterative deepening
