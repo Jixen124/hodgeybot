@@ -16,6 +16,7 @@ Stupid discord bot by Jixen.
 * Spam cooldown
 * add hodgey decide into help list
 * make hodgey use built in discord / commands
+* Improve help command
 
 #### Messages when stuff happens:
 * Get mad when people change their profiles
