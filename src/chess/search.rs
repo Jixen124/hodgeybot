@@ -1,6 +1,4 @@
-use std::cmp::Ordering;
-
-use shakmaty::{zobrist::{Zobrist64, ZobristHash}, Board, Chess, Color, Move, Outcome, Position};
+use shakmaty::{zobrist::{Zobrist64, ZobristHash}, Board, Chess, Color, Move, Outcome, Position, Role};
 
 mod piece_square_tables;
 mod test_fens;
@@ -64,20 +62,7 @@ fn nega_max(chess: &Chess, depth: u16, mut alpha: i16, beta: i16, transposition_
 
     let mut moves = chess.legal_moves();
     
-    moves.sort_unstable_by(|a, b| {
-        let a_is_interesting = a.is_capture() || a.is_promotion();
-        let b_is_interesting = b.is_capture() || b.is_promotion();
-
-        if a_is_interesting && !b_is_interesting {
-            Ordering::Less
-        }
-        else if b_is_interesting && !a_is_interesting {
-            Ordering::Greater
-        }
-        else {
-            Ordering::Equal
-        }
-    });
+    moves.sort_unstable_by_key(|m| move_score(m));
 
     for m in &moves {
         let mut new_chess = chess.clone();
@@ -168,33 +153,17 @@ mod tests {
     }
 }
 
-// const fn move_score(m: &Move) -> i16 {
+const fn move_score(m: &Move) -> i16 {
     
-//     if m.is_capture() || m.is_promotion() {1} else {0}
-
-//     // let mut score = if m.is_promotion() {60} else {0};
-//     // if let Some(role) = m.capture() {
-//     //     score += match role {
-//     //         Role::Pawn => 10,
-//     //         Role::Bishop => 30,
-//     //         Role::Knight => 30,
-//     //         Role::Rook => 50,
-//     //         _ => 90
-//     //     }
-//     // }
-//     // score
-// }
-
-
-// let a_score = move_score(a);
-// let b_score = move_score(b);
-
-// if a_score > b_score {
-//     Ordering::Less
-// }
-// else if a_score < b_score {
-//     Ordering::Greater
-// }
-// else {
-//     Ordering::Equal
-// }
+    let mut score = if m.is_promotion() {60} else {0};
+    if let Some(role) = m.capture() {
+        score += match role {
+            Role::Pawn => -10,
+            Role::Bishop => -30,
+            Role::Knight => -30,
+            Role::Rook => -50,
+            _ => -90
+        }
+    }
+    score
+}
