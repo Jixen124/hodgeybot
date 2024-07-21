@@ -81,13 +81,15 @@ impl ChessGame {
         self.chess.play_unchecked(&selected_move);
     }
 
-    pub fn legal_move_from_str(&self, move_str: &str) -> Result<Move, MoveError> {
-        if let Ok(selected_move) = UciMove::from_ascii(move_str.as_bytes()) {
+    pub fn legal_move_from_string(&self, mut move_string: String) -> Result<Move, MoveError> {
+        move_string = move_string.replace("o", "O").replace("0", "O");
+        
+        if let Ok(selected_move) = UciMove::from_ascii(move_string.as_bytes()) {
             let legal_move = selected_move.to_move(&self.chess)?;
             return Ok(legal_move)
         }
         
-        let selected_move: San = move_str.parse()?;
+        let selected_move: San = move_string.parse()?;
         let legal_move = selected_move.to_move(&self.chess)?;
         Ok(legal_move)
     }

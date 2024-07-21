@@ -8,10 +8,10 @@ use serenity::prelude::*;
 use shuttle_runtime::SecretStore;
 use tracing::{error, info};
 use rand::{Rng, thread_rng, seq::SliceRandom};
-mod quotes;
-mod jokes;
 mod chess;
 use chess::{ChessGame, ChessGames, MoveError};
+mod quotes;
+mod jokes;
 
 const HODGEY_BOT_ID: u64 = 873373606900559943;
 
@@ -270,7 +270,7 @@ impl EventHandler for Bot {
                         return;
                     }
                     
-                    let selected_move = game.legal_move_from_str(&move_str);
+                    let selected_move = game.legal_move_from_string(move_str);
                     match selected_move {
                         Err(MoveError::InvalidMove) => {
                             if let Err(e) = msg.reply(&ctx.http, "I don't understand the move you are trying to make").await {
@@ -292,7 +292,7 @@ impl EventHandler for Bot {
                     let mut id_to_move = game.id_to_move();
 
                     if !game.gameover() && id_to_move == HODGEY_BOT_ID {
-                        let _ = msg.react(&ctx.http, '👍').await;
+                        let _ = msg.react(&ctx.http, '👍');
                         let selected_move = game.find_best_move();
                         game.make_move_unchecked(selected_move);
                         id_to_move = game.id_to_move();
