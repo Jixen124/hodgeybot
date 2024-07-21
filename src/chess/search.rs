@@ -84,6 +84,26 @@ fn nega_max(chess: &Chess, depth: u16, mut alpha: i16, beta: i16, transposition_
     value
 }
 
+const fn move_score(m: &Move) -> i16 {
+    let mut score = if m.is_promotion() {60} else {0};
+    if let Some(role) = m.capture() {
+        score += match m.role() {
+            Role::Pawn => 1,
+            Role::Bishop => 3,
+            Role::Knight => 3,
+            Role::Rook => 5,
+            _ => 9
+        } - match role {
+            Role::Pawn => 10,
+            Role::Bishop => 30,
+            Role::Knight => 30,
+            Role::Rook => 50,
+            _ => 90
+        }
+    }
+    score
+}
+
 fn evaluate_position(board: &Board) -> i16 {
     let mut score = 0;
 
@@ -151,19 +171,4 @@ mod tests {
         let chess = Chess::from_setup(setup, CastlingMode::Standard).expect("position should be valid");
         assert!(super::find_best_move(&chess, 100).to_string() == "Ka1-b1");
     }
-}
-
-const fn move_score(m: &Move) -> i16 {
-    
-    let mut score = if m.is_promotion() {60} else {0};
-    if let Some(role) = m.capture() {
-        score += match role {
-            Role::Pawn => -10,
-            Role::Bishop => -30,
-            Role::Knight => -30,
-            Role::Rook => -50,
-            _ => -90
-        }
-    }
-    score
 }
