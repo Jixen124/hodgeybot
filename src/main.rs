@@ -82,6 +82,15 @@ impl EventHandler for Bot {
                 error!("Error sending message: {e:?}");
             }
         }
+        else if msg_lower == "hodgey clip review" {
+            let reply_start = format!("This clip is {}.", quotes::BAD_SYNONYMS.choose(&mut thread_rng()).unwrap());
+            let reply_string = quotes::CLIP_REVIEW.choose_multiple(&mut thread_rng(), 7)
+                .fold(reply_start, |cur, nxt| cur + "\n- " + &nxt.replace("BAD", quotes::BAD_SYNONYMS.choose(&mut thread_rng()).unwrap()));
+            
+            if let Err(e) = msg.reply(&ctx.http, format!("{}", reply_string)).await {
+                error!("Error sending message: {e:?}");
+            }
+        }
         else if msg_lower == "see" {
             if let Err(e) = msg.reply(&ctx.http, "said the blind man").await {
                 error!("Error sending message: {e:?}");
