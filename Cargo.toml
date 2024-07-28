@@ -6,10 +6,10 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.86"
 serenity = { version = "0.12", default-features = false, features = ["client", "gateway", "rustls_backend", "model", "builder"] }
-shuttle-runtime = "0.46"
-shuttle-serenity = "0.46"
+shuttle-runtime = "0.47"
+shuttle-serenity = "0.47"
 tokio = "1"
-tracing = "0.1"
+tracing = "0.1.40"
 rand = "0.8"
 shakmaty = "0.27.1"
 
