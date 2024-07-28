@@ -10,10 +10,10 @@ const TABLE_INDEX_MASK: usize = TRANSPOSITION_TABLE_SIZE - 1;
 
 #[derive(Clone, Copy, PartialEq)]
 enum TranspositionTableFlag {
+    None,
     Exact,
     Lowerbound,
-    Upperbound,
-    None //Not really needed
+    Upperbound
 }
 
 #[derive(Clone, Copy)]
@@ -24,18 +24,29 @@ struct TranspositionTableData {
     flag: TranspositionTableFlag
 }
 
-pub fn find_best_move(chess: &Chess, depth: u16) -> Move {
+impl TranspositionTableData {
+    fn empty() -> TranspositionTableData {
+        TranspositionTableData {
+            hash: 0,
+            score: 0,
+            depth: 0,
+            flag: TranspositionTableFlag::None
+        }
+    }
+}
+
+pub fn find_best_move(chess: &Chess, max_depth: u16) -> Move {
     let mut moves = chess.legal_moves();
     moves.sort_unstable_by_key(|m| move_score(m));
     let mut best_score = NEG_INFINITY;
     let mut best_move = None;
 
-    let mut transposition_table: Vec<TranspositionTableData> = vec![TranspositionTableData{hash: 0, score: 0, depth: 0, flag: TranspositionTableFlag::None}; TRANSPOSITION_TABLE_SIZE];
+    let mut transposition_table: Vec<TranspositionTableData> = vec![TranspositionTableData::empty(); TRANSPOSITION_TABLE_SIZE];
     for m in moves {
         let mut new_chess = chess.clone();
         new_chess.play_unchecked(&m);
 
-        let score = -nega_max(&new_chess, depth, NEG_INFINITY, INFINITY, &mut transposition_table);
+        let score = -nega_max(&new_chess, max_depth, NEG_INFINITY, INFINITY, &mut transposition_table);
         if score > best_score {
             best_score = score;
             best_move = Some(m)
@@ -101,6 +112,7 @@ fn nega_max(chess: &Chess, depth: u16, mut alpha: i16, mut beta: i16, transposit
         transposition_table[table_index].hash = hash.0;
         transposition_table[table_index].score = value;
         transposition_table[table_index].depth = depth;
+
         transposition_table[table_index].flag = if value <= original_alpha {
             TranspositionTableFlag::Upperbound
         }
