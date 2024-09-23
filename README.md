@@ -30,9 +30,3 @@ Stupid discord bot by Jixen.
 * Message on member unban
 * DELETED_CHANNEL_QUOTES
 * Get mad about messages being deleted
-
-#### Chess
-* Add 50 move rule and draw by repetition
-* Make O-O work with 0-0 and o-o
-* Improve transposition table
-* Add iterative deepening
