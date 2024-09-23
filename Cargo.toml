@@ -11,7 +11,8 @@ shuttle-serenity = "0.47"
 tokio = "1"
 tracing = "0.1.40"
 rand = "0.8"
-shakmaty = "0.27.1"
+shakmaty = "0.27.2"
+hodgey_chess_engine = { git = "https://github.com/Jixen124/hodgey_chess_engine" }
 
 [profile.test]
 inherits = "release"

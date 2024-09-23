@@ -605,10 +605,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d231dfb89cfffdbc30e7fc41579ed6066ad03abda9e567ccafae602b97ec5024"
 
 [[package]]
+name = "hodgey_chess_engine"
+version = "0.1.0"
+source = "git+https://github.com/Jixen124/hodgey_chess_engine#06d858acfcca5540bf5e3129d07cffffb3872743"
+dependencies = [
+ "shakmaty",
+]
+
+[[package]]
 name = "hodgeybot"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "hodgey_chess_engine",
  "rand",
  "serenity",
  "shakmaty",
@@ -1498,9 +1507,9 @@ dependencies = [
 
 [[package]]
 name = "shakmaty"
-version = "0.27.1"
+version = "0.27.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8969aea589c3356aa6c0251dbd9c27d0586224f2cb1f068f33d756966f58fb7a"
+checksum = "570f8f81c90024ef7b22ceef8c0d24fcf2ec50127a6c18adedd9dc4d43c00e6e"
 dependencies = [
  "arrayvec",
  "bitflags 2.6.0",
