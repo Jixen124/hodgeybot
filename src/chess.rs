@@ -4,7 +4,7 @@ use shakmaty::zobrist::{Zobrist64, ZobristHash};
 use shakmaty::{Bitboard, Chess, Color, Move, Position};
 use shakmaty::uci::{IllegalUciMoveError, UciMove};
 use serenity::prelude::*;
-use rand::{Rng, thread_rng};
+use rand::{Rng, rng};
 use hodgey_chess_engine::find_best_move_with_time;
 
 pub struct ChessGames;
@@ -48,7 +48,7 @@ pub struct ChessGame {
 
 impl ChessGame {
     pub fn new_game_random_sides(player1_id: u64, player2_id: u64) -> Self {
-        if thread_rng().gen_bool(0.5) {
+        if rng().random_bool(0.5) {
             Self {
                 white_id: player1_id,
                 black_id: player2_id,

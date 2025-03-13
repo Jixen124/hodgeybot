@@ -7,7 +7,7 @@ use serenity::builder::{CreateEmbed, CreateMessage};
 use serenity::prelude::*;
 use shuttle_runtime::SecretStore;
 use tracing::{error, info};
-use rand::{Rng, thread_rng, seq::SliceRandom};
+use rand::{Rng, seq::IndexedRandom, rng};
 mod chess;
 use chess::{ChessGame, ChessGames, MoveError};
 mod quotes;
@@ -22,7 +22,7 @@ impl EventHandler for Bot {
     async fn message(&self, ctx: Context, msg: Message) {
         //Get mad at MEE6
         if msg.author.id.get() == 159985870458322944 {
-            if let Err(e) = msg.reply(&ctx.http, format!("{}", quotes::MEE6.choose(&mut thread_rng()).unwrap())).await {
+            if let Err(e) = msg.reply(&ctx.http, format!("{}", quotes::MEE6.choose(&mut rng()).unwrap())).await {
                 error!("Error sending message: {e:?}");
             }
         }
@@ -32,7 +32,7 @@ impl EventHandler for Bot {
         }
 
         if msg.channel(&ctx).await.unwrap().guild().is_none() {
-            if let Err(e) = msg.channel_id.say(&ctx.http, format!("Stop messaging me, I'm {}!", quotes::BUSY.choose(&mut thread_rng()).unwrap())).await {
+            if let Err(e) = msg.channel_id.say(&ctx.http, format!("Stop messaging me, I'm {}!", quotes::BUSY.choose(&mut rng()).unwrap())).await {
                 error!("Error sending message: {e:?}");
             }
         }
@@ -53,13 +53,13 @@ impl EventHandler for Bot {
             }
         }
         else if msg_lower == "hodgey joke" {
-            let selected_joke = *jokes::JOKES.choose(&mut thread_rng()).unwrap();
+            let selected_joke = *jokes::JOKES.choose(&mut rng()).unwrap();
             
             for fields in selected_joke {
                 let embed = CreateEmbed::new()
                     .title("Hodgey Joke")
                     .url("https://youtu.be/dQw4w9WgXcQ")
-                    .colour(thread_rng().gen_range(0..16777216))
+                    .colour(rng().random_range(0..16777216))
                     .fields(fields.to_vec()); //I can probably avoid turning this into a vector, I have no clue what I am doing :)
             
                 let builder = CreateMessage::new()
@@ -73,19 +73,19 @@ impl EventHandler for Bot {
         }
         //Hodgey Val agent
         else if msg_lower == "hodgey val agent" {
-            if let Err(e) = msg.reply(&ctx.http, format!("{}", quotes::VAL_AGENTS.choose(&mut thread_rng()).unwrap())).await {
+            if let Err(e) = msg.reply(&ctx.http, format!("{}", quotes::VAL_AGENTS.choose(&mut rng()).unwrap())).await {
                 error!("Error sending message: {e:?}");
             }
         }
         else if msg_lower == "hodgey val squad" {
-            if let Err(e) = msg.reply(&ctx.http, format!("{}", quotes::VAL_AGENTS.choose_multiple(&mut thread_rng(), 5).fold(String::new(), |cur, nxt| cur + "- " + nxt + "\n"))).await {
+            if let Err(e) = msg.reply(&ctx.http, format!("{}", quotes::VAL_AGENTS.choose_multiple(&mut rng(), 5).fold(String::new(), |cur, nxt| cur + "- " + nxt + "\n"))).await {
                 error!("Error sending message: {e:?}");
             }
         }
         else if msg_lower == "hodgey clip review" {
-            let reply_start = format!("This clip is {}.", quotes::BAD_SYNONYMS.choose(&mut thread_rng()).unwrap());
-            let reply_string = quotes::CLIP_REVIEW.choose_multiple(&mut thread_rng(), 7)
-                .fold(reply_start, |cur, nxt| cur + "\n- " + &nxt.replace("BAD", quotes::BAD_SYNONYMS.choose(&mut thread_rng()).unwrap()));
+            let reply_start = format!("This clip is {}.", quotes::BAD_SYNONYMS.choose(&mut rng()).unwrap());
+            let reply_string = quotes::CLIP_REVIEW.choose_multiple(&mut rng(), 7)
+                .fold(reply_start, |cur, nxt| cur + "\n- " + &nxt.replace("BAD", quotes::BAD_SYNONYMS.choose(&mut rng()).unwrap()));
             
             if let Err(e) = msg.reply(&ctx.http, format!("{}", reply_string)).await {
                 error!("Error sending message: {e:?}");
@@ -196,7 +196,7 @@ impl EventHandler for Bot {
         else if msg_lower.starts_with("chess new") {
             //Do this before locking mutex
             let author_id = msg.author.id.get();
-            let opponent_id = if let Some(user) = msg.mentions.choose(&mut thread_rng()) {
+            let opponent_id = if let Some(user) = msg.mentions.choose(&mut rng()) {
                 user.id.get()
             }
             else {
@@ -379,26 +379,26 @@ impl EventHandler for Bot {
         //@Someone
         else if msg_lower.contains("@someone") {
             let channel_members = msg.guild_id.unwrap().members(&ctx.http, None, None).await.unwrap();
-            let mut member = channel_members.choose(&mut thread_rng()).unwrap();
+            let mut member = channel_members.choose(&mut rng()).unwrap();
             while member.user.bot {
-                member = channel_members.choose(&mut thread_rng()).unwrap();
+                member = channel_members.choose(&mut rng()).unwrap();
             }
             if let Err(e) = msg.reply(&ctx.http, format!("{}", member.mention())).await {
                 error!("Error sending message: {e:?}");
             }
         }
         else if msg_lower.contains("hodgey decide") {
-            if let Err(e) = msg.channel_id.say(&ctx.http, format!("{}", quotes::DECISION.choose(&mut thread_rng()).unwrap())).await {
+            if let Err(e) = msg.channel_id.say(&ctx.http, format!("{}", quotes::DECISION.choose(&mut rng()).unwrap())).await {
                 error!("Error sending message: {e:?}");
             }
         }
         else if msg_lower.contains("chess") {
-            if let Err(e) = msg.channel_id.say(&ctx.http, format!("{}", quotes::CHESS.choose(&mut thread_rng()).unwrap())).await {
+            if let Err(e) = msg.channel_id.say(&ctx.http, format!("{}", quotes::CHESS.choose(&mut rng()).unwrap())).await {
                 error!("Error sending message: {e:?}");
             }
         }
         else if msg_lower.contains("checkers") {
-            if let Err(e) = msg.channel_id.say(&ctx.http, format!("{}", quotes::CHECKERS.choose(&mut thread_rng()).unwrap())).await {
+            if let Err(e) = msg.channel_id.say(&ctx.http, format!("{}", quotes::CHECKERS.choose(&mut rng()).unwrap())).await {
                 error!("Error sending message: {e:?}");
             }
         }
@@ -413,30 +413,30 @@ impl EventHandler for Bot {
             }
         }
         else if msg_lower.contains("book") {
-            if let Err(e) = msg.channel_id.say(&ctx.http, format!("Have you read {}?", quotes::BOOKS.choose(&mut thread_rng()).unwrap())).await {
+            if let Err(e) = msg.channel_id.say(&ctx.http, format!("Have you read {}?", quotes::BOOKS.choose(&mut rng()).unwrap())).await {
                 error!("Error sending message: {e:?}");
             }
         }
         else if msg_lower.contains("music") || msg_lower.contains("song") {
-            if let Err(e) = msg.channel_id.say(&ctx.http, format!("{}", quotes::SONG_STARTS.choose(&mut thread_rng()).unwrap()
-                                                                                            .replace("SONG", quotes::SONGS.choose(&mut thread_rng()).unwrap()))).await {
+            if let Err(e) = msg.channel_id.say(&ctx.http, format!("{}", quotes::SONG_STARTS.choose(&mut rng()).unwrap()
+                                                                                            .replace("SONG", quotes::SONGS.choose(&mut rng()).unwrap()))).await {
                 error!("Error sending message: {e:?}");
             }
         }
         else if msg_lower.contains("movie") {
-            if let Err(e) = msg.channel_id.say(&ctx.http, format!("Have you seen {}?", quotes::MOVIES.choose(&mut thread_rng()).unwrap())).await {
+            if let Err(e) = msg.channel_id.say(&ctx.http, format!("Have you seen {}?", quotes::MOVIES.choose(&mut rng()).unwrap())).await {
                 error!("Error sending message: {e:?}");
             }
         }
-        else if {let mut rng = thread_rng(); rng.gen_range(0..100)} == 0 {
-            if let Err(e) = msg.channel_id.say(&ctx.http, format!("{}", quotes::RANDOM.choose(&mut thread_rng()).unwrap())).await {
+        else if {let mut rng = rng(); rng.random_range(0..100)} == 0 {
+            if let Err(e) = msg.channel_id.say(&ctx.http, format!("{}", quotes::RANDOM.choose(&mut rng()).unwrap())).await {
                 error!("Error sending message: {e:?}");
             }
         }
     }
     
     async fn channel_create(&self, ctx: Context, ch: GuildChannel) {
-        if let Err(e) = ch.say(&ctx.http, format!("{}", quotes::NEW_CHANNEL.choose(&mut thread_rng()).unwrap())).await {
+        if let Err(e) = ch.say(&ctx.http, format!("{}", quotes::NEW_CHANNEL.choose(&mut rng()).unwrap())).await {
             error!("Error sending message: {e:?}");
         }
     }

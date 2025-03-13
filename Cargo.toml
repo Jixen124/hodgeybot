@@ -4,14 +4,14 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.86"
+anyhow = "1.0"
 serenity = { version = "0.12", default-features = false, features = ["client", "gateway", "rustls_backend", "model", "builder"] }
-shuttle-runtime = "0.47"
-shuttle-serenity = "0.47"
+shuttle-runtime = "0.53.0"
+shuttle-serenity = "0.53.0"
 tokio = "1"
-tracing = "0.1.40"
-rand = "0.8"
-shakmaty = "0.27.2"
+tracing = "0.1.41"
+rand = "0.9.0"
+shakmaty = "0.27.3"
 hodgey_chess_engine = { git = "https://github.com/Jixen124/hodgey_chess_engine" }
 
 [profile.test]
