@@ -8,6 +8,7 @@ use serenity::prelude::*;
 use shuttle_runtime::SecretStore;
 use tracing::{error, info};
 use rand::{Rng, seq::IndexedRandom, rng};
+use std::fmt::Write;
 mod chess;
 use chess::{ChessGame, ChessGames, MoveError};
 mod quotes;
@@ -79,6 +80,20 @@ impl EventHandler for Bot {
         }
         else if msg_lower == "hodgey val squad" {
             if let Err(e) = msg.reply(&ctx.http, format!("{}", quotes::VAL_AGENTS.choose_multiple(&mut rng(), 5).fold(String::new(), |cur, nxt| cur + "- " + nxt + "\n"))).await {
+                error!("Error sending message: {e:?}");
+            }
+        }
+        else if msg_lower == "hodgey gtfo squad" {
+            let mut response = String::new();
+            // let mut rng = rng();
+            for player_number in 1..=4 {
+                let main = quotes::GTFO_MAIN_WEAPONS.choose(&mut rng()).expect("Should be able to choose random element");
+                let secondary = quotes::GTFO_SECONDARY_WEAPONS.choose(&mut rng()).expect("Should be able to choose random element");
+                let melee = quotes::GTFO_MELEE_WEAPONS.choose(&mut rng()).expect("Should be able to choose random element");
+                let tool = quotes::GTFO_TOOLS.choose(&mut rng()).expect("Should be able to choose random element");
+                writeln!(&mut response, "### Player {}\n- {}\n- {}\n- {}\n- {}", player_number, main, secondary, melee, tool).expect("Should be able to write to string");
+            }
+            if let Err(e) = msg.reply(&ctx.http, response).await {
                 error!("Error sending message: {e:?}");
             }
         }
